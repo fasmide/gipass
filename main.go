@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/fasmide/gipass/gui"
 	"github.com/fasmide/gipass/store"
 )
 
@@ -20,4 +21,6 @@ func main() {
 
 		fmt.Printf("%d (%s): '%s'\n", i, v.URL, password)
 	}
+
+	gui.Run()
 }
