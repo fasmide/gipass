@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"fmt"
 	"image/color"
 	"log"
 	"os"
@@ -30,6 +31,10 @@ var searchInput = &widget.Editor{
 }
 var editor layout.Widget
 
+var results widget.List
+var result layout.Widget
+var selected int
+
 func Run() {
 	// initialize colors and theme
 	mainColor = color.NRGBA{R: 127, G: 127, B: 87, A: 255}
@@ -51,7 +56,22 @@ func Run() {
 		})
 	}
 
-	//searchInput.Focus()
+	searchInput.Focus()
+
+	results = widget.List{List: layout.List{Axis: layout.Vertical}}
+
+	result = func(gtx layout.Context) layout.Dimensions {
+		return material.List(th, &results).Layout(gtx, 700, func(gtx layout.Context, i int) layout.Dimensions {
+			m := material.Body1(th, fmt.Sprintf("index: %d", i))
+			if selected == i {
+				m.Color = color.NRGBA{R: 0, G: 255, B: 0, A: 255}
+			} else {
+				m.Color = mainColor
+			}
+
+			return m.Layout(gtx)
+		})
+	}
 
 	go func() {
 		w := app.NewWindow()
@@ -68,26 +88,52 @@ func loop(w *app.Window) error {
 	for {
 		e := <-w.Events()
 		switch e := e.(type) {
-		case key.Event:
-			log.Printf("Event %+v", e)
-			if e.Modifiers.Contain(key.ModCtrl) {
-				if e.Name == "c" {
-					return nil
-				}
-			}
 		case system.DestroyEvent:
 			return e.Err
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
-			paint.Fill(&ops, color.NRGBA{R: 0, G: 0, B: 0, A: 255})
+			handleInput(&gtx)
 
+			paint.Fill(&ops, color.NRGBA{R: 0, G: 0, B: 0, A: 255})
 			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(header.Layout),
 				layout.Rigid(editor),
-				// layout.Rigid(header.Layout),
+				layout.Flexed(1, result),
 			)
 
 			e.Frame(gtx.Ops)
 		}
 	}
+}
+
+var inputTag *struct{}
+
+func handleInput(gtx *layout.Context) {
+	// TODO: initialize this elsewhere
+	if inputTag == nil {
+		inputTag = &struct{}{}
+	}
+
+	for idx, i := range gtx.Events(inputTag) {
+		log.Printf("Input queue (%d): %T: %+v", idx, i, i)
+
+		// Look for key.Event - change selected accordingly
+		ki, ok := i.(key.Event)
+		if !ok {
+			continue
+		}
+
+		if ki.State == key.Press {
+			if ki.Name == key.NameUpArrow {
+				selected = selected - 1
+			}
+
+			if ki.Name == key.NameDownArrow {
+				selected = selected + 1
+			}
+		}
+	}
+
+	key.InputOp{Tag: inputTag, Keys: "[←,→,↑,↓]"}.Add(gtx.Ops)
+
 }
