@@ -20,19 +20,24 @@ import (
 	"gioui.org/font/gofont"
 )
 
-var th *material.Theme
-var mainColor color.NRGBA
+var (
+	th        *material.Theme
+	mainColor color.NRGBA
+)
 
-var header material.LabelStyle
+var (
+	header      material.LabelStyle
+	searchInput = &widget.Editor{
+		SingleLine: true,
+		Submit:     true,
+	}
 
-var searchInput = &widget.Editor{
-	SingleLine: true,
-	Submit:     true,
-}
-var editor layout.Widget
+	editor layout.Widget
 
-var results widget.List
-var result layout.Widget
+	results    widget.List
+	resultView layout.Widget
+)
+
 var selected int
 
 func Run() {
@@ -60,7 +65,7 @@ func Run() {
 
 	results = widget.List{List: layout.List{Axis: layout.Vertical}}
 
-	result = func(gtx layout.Context) layout.Dimensions {
+	resultView = func(gtx layout.Context) layout.Dimensions {
 		return material.List(th, &results).Layout(gtx, 700, func(gtx layout.Context, i int) layout.Dimensions {
 			m := material.Body1(th, fmt.Sprintf("index: %d", i))
 			if selected == i {
@@ -92,6 +97,7 @@ func loop(w *app.Window) error {
 			return e.Err
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
+			handleQuery(&gtx)
 
 			handleEscape(&gtx)
 			handleNavigation(&gtx)
@@ -100,10 +106,9 @@ func loop(w *app.Window) error {
 			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(header.Layout),
 				layout.Rigid(editor),
-				layout.Flexed(1, result),
+				layout.Flexed(1, resultView),
 			)
 
-			handleQuery(&gtx)
 			e.Frame(gtx.Ops)
 
 		}
@@ -125,17 +130,16 @@ func handleQuery(gtx *layout.Context) {
 	}
 
 	for _, i := range gtx.Events(&submitTag) {
-		log.Printf("what %T: %+v", i, i)
 		ki, ok := i.(key.Event)
 		if !ok {
 			continue
 		}
 
 		if ki.State == key.Press {
-			os.Exit(0)
+			log.Printf("we should submit!")
 		}
 	}
-	key.InputOp{Tag: &submitTag, Keys: key.NameEnter}.Add(gtx.Ops)
+	key.InputOp{Tag: &submitTag, Keys: key.NameReturn}.Add(gtx.Ops)
 }
 
 var escapeTag = &struct{}{}
