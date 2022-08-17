@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"gioui.org/app"
+	"gioui.org/io/clipboard"
 	"gioui.org/io/key"
 	"gioui.org/io/system"
 	"gioui.org/layout"
@@ -110,9 +111,18 @@ func loop(w *app.Window) error {
 			)
 
 			e.Frame(gtx.Ops)
-
+		default:
+			log.Printf("dont know about %T, %+v", e, e)
 		}
 	}
+}
+
+func selectResult(gtx *layout.Context) {
+	r := fmt.Sprintf("You decided on %d", selected)
+	log.Print(r)
+
+	clipboard.WriteOp{Text: r}.Add(gtx.Ops)
+	op.InvalidateOp{}.Add(gtx.Ops)
 }
 
 var submitTag = &struct{}{}
@@ -125,7 +135,7 @@ func handleQuery(gtx *layout.Context) {
 			log.Printf("we should search")
 
 		case widget.SubmitEvent:
-			log.Printf("we should submit!")
+			selectResult(gtx)
 		}
 	}
 
@@ -136,7 +146,7 @@ func handleQuery(gtx *layout.Context) {
 		}
 
 		if ki.State == key.Press {
-			log.Printf("we should submit!")
+			selectResult(gtx)
 		}
 	}
 	key.InputOp{Tag: &submitTag, Keys: key.NameReturn}.Add(gtx.Ops)
