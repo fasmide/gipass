@@ -92,7 +92,9 @@ func loop(w *app.Window) error {
 			return e.Err
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
-			handleInput(&gtx)
+
+			handleEscape(&gtx)
+			handleNavigation(&gtx)
 
 			paint.Fill(&ops, color.NRGBA{R: 0, G: 0, B: 0, A: 255})
 			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -101,39 +103,86 @@ func loop(w *app.Window) error {
 				layout.Flexed(1, result),
 			)
 
+			handleQuery(&gtx)
 			e.Frame(gtx.Ops)
+
 		}
 	}
 }
 
-var inputTag *struct{}
+var submitTag = &struct{}{}
 
-func handleInput(gtx *layout.Context) {
-	// TODO: initialize this elsewhere
-	if inputTag == nil {
-		inputTag = &struct{}{}
+func handleQuery(gtx *layout.Context) {
+	for _, e := range searchInput.Events() {
+
+		switch e.(type) {
+		case widget.ChangeEvent:
+			log.Printf("we should search")
+
+		case widget.SubmitEvent:
+			log.Printf("we should submit!")
+		}
 	}
 
-	for idx, i := range gtx.Events(inputTag) {
-		log.Printf("Input queue (%d): %T: %+v", idx, i, i)
-
-		// Look for key.Event - change selected accordingly
+	for _, i := range gtx.Events(&submitTag) {
+		log.Printf("what %T: %+v", i, i)
 		ki, ok := i.(key.Event)
 		if !ok {
 			continue
 		}
 
 		if ki.State == key.Press {
-			if ki.Name == key.NameUpArrow {
-				selected = selected - 1
-			}
-
-			if ki.Name == key.NameDownArrow {
-				selected = selected + 1
-			}
+			os.Exit(0)
 		}
 	}
+	key.InputOp{Tag: &submitTag, Keys: key.NameEnter}.Add(gtx.Ops)
+}
 
-	key.InputOp{Tag: inputTag, Keys: "[←,→,↑,↓]"}.Add(gtx.Ops)
+var escapeTag = &struct{}{}
+
+func handleEscape(gtx *layout.Context) {
+	for _, i := range gtx.Events(&escapeTag) {
+		ki, ok := i.(key.Event)
+		if !ok {
+			continue
+		}
+
+		if ki.State == key.Press {
+			os.Exit(0)
+		}
+	}
+	key.InputOp{Tag: &escapeTag, Keys: key.NameEscape}.Add(gtx.Ops)
+}
+
+// The navigation is somewhat broken as the Editor widget eats some arrow keys
+// depending on where the cursor is placed - there are some hacks we can explore
+// but for now, we are just going to live with it and maybe the gioui will
+// evolve enough to have a pleasent solution in the future
+//
+// see: https://gophers.slack.com/archives/CM87SNCGM/p1660297386051799
+var navigationTag = &struct{}{}
+
+func handleNavigation(gtx *layout.Context) {
+	for _, i := range gtx.Events(&navigationTag) {
+		ki, ok := i.(key.Event)
+		if !ok {
+			continue
+		}
+
+		// could be key.Release which we dont care about
+		if ki.State != key.Press {
+			continue
+		}
+
+		if ki.Name == key.NameUpArrow {
+			selected = selected - 1
+			continue
+		}
+		if ki.Name == key.NameDownArrow {
+			selected = selected + 1
+			continue
+		}
+	}
+	key.InputOp{Tag: &navigationTag, Keys: "[↑,↓]"}.Add(gtx.Ops)
 
 }
