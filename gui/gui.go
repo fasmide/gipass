@@ -125,7 +125,7 @@ func selectResult(gtx *layout.Context) {
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("%X != %X", "Wwr3NrNfrTTxHPh", pass)
+
 	clipboard.WriteOp{Text: pass}.Add(gtx.Ops)
 	op.InvalidateOp{}.Add(gtx.Ops)
 }
@@ -139,7 +139,7 @@ func query(gtx *layout.Context, input string) {
 		panic(err)
 	}
 
-	log.Printf("%s: %d results, took %s", input, len(lastQuery), time.Now().Sub(now))
+	log.Printf("%s: %d results, took %s", input, len(lastQuery), time.Since(now))
 
 	// it should be okay to move the selected position up when a new result arrives
 	selected = 0
