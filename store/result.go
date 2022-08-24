@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/sha1"
 	"fmt"
+	"log"
 
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -22,11 +23,12 @@ func (r Result) CleartextPassword() (string, error) {
 		return "", fmt.Errorf("cannot create new aes cipher: %w", err)
 	}
 
+	// remove "v10"
 	encrypted := r.Password[3:]
 	cleartext := make([]byte, len(encrypted))
-
+	log.Printf("pre-what %X len %d", cleartext, len(cleartext))
 	cbc := cipher.NewCBCDecrypter(block, []byte("                "))
 	cbc.CryptBlocks(cleartext, encrypted)
-
+	log.Printf("what %X, \"%s\"", cleartext, string(cleartext))
 	return string(cleartext), nil
 }

@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"log"
 	"os"
+	"time"
 
 	"gioui.org/app"
 	"gioui.org/io/clipboard"
@@ -17,6 +18,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/fasmide/gipass/store"
 
 	"gioui.org/font/gofont"
 )
@@ -39,7 +41,10 @@ var (
 	resultView layout.Widget
 )
 
-var selected int
+var (
+	selected  int
+	lastQuery []store.Result
+)
 
 func Run() {
 	// initialize colors and theme
@@ -67,8 +72,8 @@ func Run() {
 	results = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 	resultView = func(gtx layout.Context) layout.Dimensions {
-		return material.List(th, &results).Layout(gtx, 700, func(gtx layout.Context, i int) layout.Dimensions {
-			m := material.Body1(th, fmt.Sprintf("index: %d", i))
+		return material.List(th, &results).Layout(gtx, len(lastQuery), func(gtx layout.Context, i int) layout.Dimensions {
+			m := material.Body1(th, fmt.Sprintf("%s @ %s", lastQuery[i].Username, lastQuery[i].URL))
 			if selected == i {
 				m.Color = color.NRGBA{R: 0, G: 255, B: 0, A: 255}
 			} else {
@@ -111,17 +116,34 @@ func loop(w *app.Window) error {
 			)
 
 			e.Frame(gtx.Ops)
-		default:
-			log.Printf("dont know about %T, %+v", e, e)
 		}
 	}
 }
 
 func selectResult(gtx *layout.Context) {
-	r := fmt.Sprintf("You decided on %d", selected)
-	log.Print(r)
+	pass, err := lastQuery[selected].CleartextPassword()
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("%X != %X", "Wwr3NrNfrTTxHPh", pass)
+	clipboard.WriteOp{Text: pass}.Add(gtx.Ops)
+	op.InvalidateOp{}.Add(gtx.Ops)
+}
 
-	clipboard.WriteOp{Text: r}.Add(gtx.Ops)
+func query(gtx *layout.Context, input string) {
+	now := time.Now()
+
+	var err error
+	lastQuery, err = store.Logins.Query(input)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Printf("%s: %d results, took %s", input, len(lastQuery), time.Now().Sub(now))
+
+	// it should be okay to move the selected position up when a new result arrives
+	selected = 0
+
 	op.InvalidateOp{}.Add(gtx.Ops)
 }
 
@@ -132,7 +154,7 @@ func handleQuery(gtx *layout.Context) {
 
 		switch e.(type) {
 		case widget.ChangeEvent:
-			log.Printf("we should search")
+			query(gtx, searchInput.Text())
 
 		case widget.SubmitEvent:
 			selectResult(gtx)
@@ -190,11 +212,19 @@ func handleNavigation(gtx *layout.Context) {
 
 		if ki.Name == key.NameUpArrow {
 			selected = selected - 1
-			continue
+
 		}
 		if ki.Name == key.NameDownArrow {
 			selected = selected + 1
-			continue
+
+		}
+
+		// make bounds wrap around
+		if selected > len(lastQuery)-1 {
+			selected = 0
+		}
+		if selected < 0 {
+			selected = len(lastQuery) - 1
 		}
 	}
 	key.InputOp{Tag: &navigationTag, Keys: "[↑,↓]"}.Add(gtx.Ops)
