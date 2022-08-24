@@ -85,7 +85,7 @@ func Run() {
 	}
 
 	go func() {
-		w := app.NewWindow()
+		w := app.NewWindow(app.Title("Cyber Cracker"))
 		if err := loop(w); err != nil {
 			log.Fatal(err)
 		}
