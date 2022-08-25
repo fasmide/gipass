@@ -43,7 +43,7 @@ func NewLogins() (*DB, error) {
 }
 
 func (d *DB) Query(s string) ([]Result, error) {
-	stmt, err := d.db.Prepare("select action_url, username_value, password_value from logins where action_url LIKE ?")
+	stmt, err := d.db.Prepare("select origin_url, username_value, password_value, times_used from logins where origin_url LIKE ? ORDER BY times_used DESC")
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare query: %w", err)
 	}
@@ -56,7 +56,7 @@ func (d *DB) Query(s string) ([]Result, error) {
 	results := make([]Result, 0)
 	for r.Next() {
 		p := Result{}
-		err := r.Scan(&p.URL, &p.Username, &p.Password)
+		err := r.Scan(&p.URL, &p.Username, &p.Password, &p.TimesUsed)
 		if err != nil {
 			return nil, fmt.Errorf("unable to scan row: %w", err)
 		}

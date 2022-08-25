@@ -73,7 +73,7 @@ func Run() {
 
 	resultView = func(gtx layout.Context) layout.Dimensions {
 		return material.List(th, &results).Layout(gtx, len(lastQuery), func(gtx layout.Context, i int) layout.Dimensions {
-			m := material.Body1(th, fmt.Sprintf("%s @ %s", lastQuery[i].Username, lastQuery[i].URL))
+			m := material.Body1(th, fmt.Sprintf("(%d) %s @ %s", lastQuery[i].TimesUsed, lastQuery[i].Username, lastQuery[i].URL))
 			if selected == i {
 				m.Color = color.NRGBA{R: 0, G: 255, B: 0, A: 255}
 			} else {
